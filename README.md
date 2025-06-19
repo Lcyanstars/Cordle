@@ -114,8 +114,12 @@ CodeSnippet 提供多种方法支持游戏逻辑：
 **Point 模式（积分模式）:** 不限制猜测次数或时间，而是通过积分衡量表现，玩家可以无限猜测直到猜出代码，猜得越快、提示越少则积分越高。由pointGame类实现：
 
 - **初始化：** 构造时默认fuzzyAllowed=false, showPID=false（模糊和题号初始禁用），并设置积分参数默认值：每次猜测罚分guessPenalty=100，积分系数pointFactor=500，奖励系数rewardFactor=1.5。这些参数确保合理的得分计算范围（可在构造时调整）。start()选取谜题后记录总字符数totalNumber用于评分计算。玩家进入游戏时界面会提示可输入特殊命令启用ID显示或模糊匹配，但会减少积分。
-- **积分计算：** calcPoint()函数根据当前状态计算玩家积分：公式为  
-    其中 guessed 为目前已揭示字符数，guesses 为已猜次数。该公式表示：揭示字符越多积分越高（平方项奖励完整解答），猜测次数越多扣分越多（鼓励少猜）。此外，根据功能启用情况调整：如果玩家启用了题号显示，则乘以showPidPenalty=0.5（积分减半）；启用了模糊匹配则乘以fuzzyPenalty=0.8（积分再打八折），表示使用提示越多，最终得分会降低。若玩家最终猜出了全部代码（guessed == totalNumber），则再乘以奖励系数rewardFactor（>=1，一般为1.5）以嘉奖完全解答。积分实时计算用于显示和最后统计。
+- **积分计算：** calcPoint()函数根据当前状态计算玩家积分：公式为
+
+    $$\rm{points} = \rm{pointsFactor} \times \left(\frac{\rm{guess}^2}{\rm{totalNumber}}\right)-\rm{guessPenalty} \times \rm{guesses}$$
+
+  
+    其中 guess 为目前已揭示字符数，guesses 为已猜次数。该公式表示：揭示字符越多积分越高（平方项奖励完整解答），猜测次数越多扣分越多（鼓励少猜）。此外，根据功能启用情况调整：如果玩家启用了题号显示，则乘以showPidPenalty=0.5（积分减半）；启用了模糊匹配则乘以fuzzyPenalty=0.8（积分再打八折），表示使用提示越多，最终得分会降低。若玩家最终猜出了全部代码（guess == totalNumber），则再乘以奖励系数rewardFactor（>=1，一般为1.5）以嘉奖完全解答。积分实时计算用于显示和最后统计。
 - **游戏过程：** Point 模式不设失败条件，因此revealTimes()固定返回0（不会自动揭示），isOver()恒返回false（猜测可以无限继续）。玩家可以一直猜下去直至猜出所有字符。游戏中可随时输入命令P来显示谜题的题目ID（即代码来源，如洛谷题号链接），或F开启模糊匹配辅助，这两者都会降低积分。getGameInfo()每次都会调用calcPoint()更新当前积分并返回如“Points: 1234.5”的字符串；getDisplayLines()在输出状态和代码遮盖内容之外，特别增加了两行说明提醒玩家这些特殊命令：“Enter P to show the problem ID, or F to enable fuzzy match（The game will be easier, but you will get LESS points）”，然后提示猜测输入方式。这些指令行帮助玩家平衡是否使用提示功能。
 - **结束判定：** 由于该模式无强制结束，玩家输入E表示主动结束游戏。如果玩家已猜出所有代码，则通过Win()处理胜利，否则即便中途放弃（可能仍有部分字符未猜），系统也按照**结算分数**处理——Point 模式没有严格的“失败”，哪怕积分为负也不会“游戏结束失败”，所以Lose()直接调用Win()逻辑。Win()先调用calcPoint()确认最终积分，然后返回信息如“You achieved X points!”显示玩家本局获得的积分数。
 - **统计记录：** saveStatistics(bool isWin)在 Point 模式下忽略 isWin 区分，都算作一局完成，只是将最终积分传递给统计模块。统计数据中，会增加 point 模式游戏次数计数，并将本局积分累加到总积分。历史记录行包含时间、模式名“Point”、题目ID和“points: X Win”字样（为了格式统一标注Win，但实际上Point模式不区分胜负）。统计窗口会展示累计进行的 Point 模式局数，以及平均每局积分和总积分。
